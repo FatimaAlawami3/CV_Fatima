@@ -17,6 +17,7 @@
 *.mov
 *.MOV
 *.avi
+!yoga_yolov7.mp4
 *.data
 *.json
 *.cfg
