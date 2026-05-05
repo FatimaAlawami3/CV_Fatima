@@ -13,7 +13,6 @@ def pose_video(frame):
     mapped_img = frame.copy()
     # Letterbox resizing.
     img = letterbox(frame, input_size, stride=64, auto=True)[0]
-    print(img.shape)
     img_ = img.copy()
     # Convert the array to 4D.
     img = transforms.ToTensor()(img)
@@ -50,7 +49,7 @@ def pose_video(frame):
 
 #------------------------------------------------------------------------------#
 # Change forward pass input size.
-input_size = 256
+input_size = 192
 
 #---------------------------INITIALIZATIONS------------------------------------#
 
@@ -71,28 +70,38 @@ model.to(device)
 
 # Provide the list of paths to your chosen videos her
 videos = [
-        'skydiving',
-        'far-away']
+        'yoga']
 
 file_name = videos[0] + '.mp4'
 vid_path = '../media/' + file_name
+save_name = videos[0]
 
 cap = cv2.VideoCapture(vid_path)
 fps = int(cap.get(cv2.CAP_PROP_FPS))
 ret, frame = cap.read()
+if not ret:
+    raise RuntimeError(f"Unable to read the input video: {vid_path}")
 h, w, _ = frame.shape
+preview_h, preview_w = letterbox(frame, input_size, stride=64, auto=True)[0].shape[:2]
 
 # May need to change the w, h as letterbox function reshapes the image.
-#out = cv2.VideoWriter('./' + file_name + '_yolov7', 
-#                       cv2.VideoWriter_fourcc(*'mp4v'), 
+#out = cv2.VideoWriter('./' + file_name + '_yolov7',
+#                       cv2.VideoWriter_fourcc(*'mp4v'),
 #                       fps, (w, h))
 
-out = cv2.VideoWriter(f"{save_name}_yolo7.avi",cv2.VideoWriter_fourcc('M','J','P','G'), 10, w,h)
+out = cv2.VideoWriter(
+    f"{save_name}_yolov7.mp4",
+    cv2.VideoWriter_fourcc(*'mp4v'),
+    fps,
+    (preview_w, preview_h),
+)
 
 #-------------------------------------------------------------------------------#
 
 
 if __name__ == '__main__':
+    cv2.namedWindow('Output', cv2.WINDOW_NORMAL)
+    cv2.resizeWindow('Output', preview_w, preview_h)
     while True:
         ret, frame = cap.read()
         
@@ -105,8 +114,8 @@ if __name__ == '__main__':
         cv2.putText(img, 'FPS : {:.2f}'.format(fps_), (200, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2, cv2.LINE_AA)
         cv2.putText(img, 'YOLOv7', (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 2, cv2.LINE_AA)
 
-        cv2.imshow('Output', img[...,::-1])
-        out.write(img[...,::-1])
+        cv2.imshow('Output', img)
+        out.write(img)
         key = cv2.waitKey(1)
         if key == ord('q'):
         	break

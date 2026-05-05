@@ -7,6 +7,8 @@ import os
 parser = argparse.ArgumentParser(description='Run keypoint detection')
 parser.add_argument("--device", default="cpu", help="Device to inference on")
 parser.add_argument("--video_file", default="sample_video.mp4", help="Input Video")
+parser.add_argument("--input_size", type=int, default=224, help="Network input width/height")
+parser.add_argument("--frame_step", type=int, default=3, help="Process every Nth frame")
 
 args = parser.parse_args()
 
@@ -25,8 +27,8 @@ elif MODE == "MPI" :
     POSE_PAIRS = [[0,1], [1,2], [2,3], [3,4], [1,5], [5,6], [6,7], [1,14], [14,8], [8,9], [9,10], [14,11], [11,12], [12,13] ]
 
 
-inWidth = 368
-inHeight = 368
+inWidth = args.input_size
+inHeight = args.input_size
 threshold = 0.1
 
 
@@ -36,24 +38,37 @@ hasFrame, frame = cap.read()
 
 save_name = os.path.splitext(os.path.basename(input_source))[0]
 print(save_name)
-vid_writer = cv2.VideoWriter(f"{save_name}_openpose.avi",cv2.VideoWriter_fourcc('M','J','P','G'), 10, (frame.shape[1],frame.shape[0]))
+vid_writer = cv2.VideoWriter(
+    f"{save_name}_openpose.mp4",
+    cv2.VideoWriter_fourcc(*'mp4v'),
+    10,
+    (frame.shape[1], frame.shape[0]),
+)
 
 net = cv2.dnn.readNetFromCaffe(protoFile, weightsFile)
 if args.device == "cpu":
-    net.setPreferableBackend(cv2.dnn.DNN_TARGET_CPU)
+    net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
+    net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
     print("Using CPU device")
 elif args.device == "gpu":
     net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
     net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
     print("Using GPU device")
 
+frame_idx = 0
+cv2.namedWindow('OpenPose Output', cv2.WINDOW_NORMAL)
 while cv2.waitKey(1) < 0:
     t = time.time()
     hasFrame, frame = cap.read()
-    frameCopy = np.copy(frame)
     if not hasFrame:
         cv2.waitKey()
         break
+    frame_idx += 1
+
+    if frame_idx % args.frame_step != 0:
+        continue
+
+    frameCopy = np.copy(frame)
 
     frameWidth = frame.shape[1]
     frameHeight = frame.shape[0]
@@ -100,9 +115,10 @@ while cv2.waitKey(1) < 0:
 
     cv2.putText(frame, "time taken = {:.2f} sec".format(time.time() - t), (50, 50), cv2.FONT_HERSHEY_COMPLEX, .8, (255, 50, 0), 2, lineType=cv2.LINE_AA)
     # cv2.putText(frame, "OpenPose using OpenCV", (50, 50), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 50, 0), 2, lineType=cv2.LINE_AA)
-    # cv2.imshow('Output-Keypoints', frameCopy)
-    #cv2.imshow('Output-Skeleton', frame)
+    cv2.imshow('OpenPose Output', frame)
 
     vid_writer.write(frame)
 
 vid_writer.release()
+cap.release()
+cv2.destroyAllWindows()

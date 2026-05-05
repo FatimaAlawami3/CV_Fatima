@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+
+pose/coco/*.caffemodel
+pose/mpi/*.caffemodel
